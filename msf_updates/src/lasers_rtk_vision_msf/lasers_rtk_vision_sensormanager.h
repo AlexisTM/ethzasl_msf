@@ -23,8 +23,8 @@
 #include <msf_core/msf_sensormanagerROS.h>
 #include <msf_core/msf_IMUHandler_ROS.h>
 #include "msf_statedef.hpp"
-#include <msf_updates/pressure_sensor_handler/presure_sensorhandler.h>
-#include <msf_updates/pressure_sensor_handler/presure_measurement.h>
+#include <msf_updates/pressure_sensor_handler/pressure_sensorhandler.h>
+#include <msf_updates/pressure_sensor_handler/pressure_measurement.h>
 #include <msf_updates/pose_sensor_handler/pose_sensorhandler.h>
 #include <msf_updates/pose_sensor_handler/pose_measurement.h>
 #include <msf_updates/position_sensor_handler/position_sensorhandler.h>
@@ -231,13 +231,14 @@ class LasersRTKVisionManager : public msf_core::MSF_SensorManagerROS<
     meas->SetStateInitValue < StateDefinition_T::q > (q);
     meas->SetStateInitValue < StateDefinition_T::b_w > (b_w);
     meas->SetStateInitValue < StateDefinition_T::b_a > (b_a);
-    meas->SetStateInitValue < StateDefinition_T::L
-        > (Eigen::Matrix<double, 1, 1>::Constant(scale));
+    meas->SetStateInitValue < StateDefinition_T::L > (Eigen::Matrix<double, 1, 1>::Constant(scale));
     meas->SetStateInitValue < StateDefinition_T::q_wv > (q_wv);
     meas->SetStateInitValue < StateDefinition_T::p_wv > (p_wv);
     meas->SetStateInitValue < StateDefinition_T::q_ic > (q_ic);
     meas->SetStateInitValue < StateDefinition_T::p_ic > (p_ic);
     meas->SetStateInitValue < StateDefinition_T::p_ip > (p_ip);
+    meas->SetStateInitValue < StateDefinition_T::b_p > (b_p);
+
 
     SetStateCovariance(meas->GetStateCovariance());  // Call my set P function.
     meas->Getw_m() = w_m;
