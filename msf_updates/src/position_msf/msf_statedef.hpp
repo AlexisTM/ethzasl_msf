@@ -35,6 +35,12 @@ enum StateDefinition {  // Must not manually set the enum values!
   b_w,
   b_a,
   p_ip
+
+
+
+
+
+  
 };
 
 namespace {
