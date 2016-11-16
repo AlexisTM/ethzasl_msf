@@ -22,10 +22,12 @@
 #include <boost/fusion/container.hpp>
 
 namespace msf_updates {
+
 /*
  * This file contains the state definition of the EKF as defined for a given set
  * of sensors / states to estimate.
  */
+
 enum StateDefinition {  // Must not manually set the enum values!
   p,
   v,
@@ -42,6 +44,7 @@ enum StateDefinition {  // Must not manually set the enum values!
 };
 
 namespace {
+  
 /***
  * Setup core state, then auxiliary state.
  */

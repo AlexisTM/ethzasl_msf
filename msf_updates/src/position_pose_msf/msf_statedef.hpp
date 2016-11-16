@@ -20,12 +20,15 @@
 #include <Eigen/Dense>
 #include <msf_core/msf_fwds.h>
 #include <boost/fusion/container.hpp>
+
 namespace msf_updates {
+
 /*
  * This file contains the state definition of the EKF as defined for a given set
  * of sensors / states to estimate.
  */
-enum StateDefinition {  //must not manually set the enum values!
+
+enum StateDefinition {  // Must not manually set the enum values!
   p,
   v,
   q,
@@ -37,9 +40,11 @@ enum StateDefinition {  //must not manually set the enum values!
   q_ic,
   p_ic,
   p_ip
+  
 };
 
 namespace {
+
 /***
  * Setup core state, then auxiliary state.
  */

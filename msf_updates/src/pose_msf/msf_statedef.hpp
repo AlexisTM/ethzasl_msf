@@ -25,7 +25,7 @@ namespace msf_updates {
 
 /*
  * This file contains the state definition of the EKF as defined for a given set
- * of sensors / states to estimate
+ * of sensors / states to estimate.
  */
 
 enum StateDefinition {  // Must not manually set the enum values!
@@ -39,6 +39,8 @@ enum StateDefinition {  // Must not manually set the enum values!
   p_wv,
   q_ic,
   p_ic
+
+  
 };
 
 namespace {

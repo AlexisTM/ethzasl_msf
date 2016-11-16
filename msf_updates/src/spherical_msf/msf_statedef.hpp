@@ -21,7 +21,6 @@
 #include <msf_core/msf_fwds.h>
 #include <boost/fusion/container.hpp>
 #include <boost/static_assert.hpp>
-
 namespace msf_updates {
 
 /*
@@ -36,6 +35,12 @@ enum StateDefinition {  // Must not manually set the enum values!
   b_w,
   b_a,
   p_ip
+
+
+
+
+
+  
 };
 
 namespace {
