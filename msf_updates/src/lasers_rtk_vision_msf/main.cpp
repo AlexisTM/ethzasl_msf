@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "lasers_rtk_sensormanager.h"
+#include "lasers_rtk_vision_sensormanager.h"
 
 int main(int argc, char** argv) {
   ros::init(argc, argv, "msf_lasers_rtk_vision_sensor");
