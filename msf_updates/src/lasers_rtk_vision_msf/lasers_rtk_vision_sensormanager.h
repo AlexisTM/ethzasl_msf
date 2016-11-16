@@ -14,8 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef POSITION_POSE_SENSOR_MANAGER_H
-#define POSITION_POSE_SENSOR_MANAGER_H
+#ifndef LASERS_RTK_VISION_SENSOR_MANAGER_H
+#define LASERS_RTK_VISION_SENSOR_MANAGER_H
 
 #include <ros/ros.h>
 
@@ -23,21 +23,23 @@
 #include <msf_core/msf_sensormanagerROS.h>
 #include <msf_core/msf_IMUHandler_ROS.h>
 #include "msf_statedef.hpp"
+#include <msf_updates/pressure_sensor_handler/presure_sensorhandler.h>
+#include <msf_updates/pressure_sensor_handler/presure_measurement.h>
 #include <msf_updates/pose_sensor_handler/pose_sensorhandler.h>
 #include <msf_updates/pose_sensor_handler/pose_measurement.h>
 #include <msf_updates/position_sensor_handler/position_sensorhandler.h>
 #include <msf_updates/position_sensor_handler/position_measurement.h>
-#include <msf_updates/PositionPoseSensorConfig.h>
+#include <msf_updates/LasersRTKVisionSensorConfig.h>
 
 namespace msf_updates {
 
-typedef msf_updates::PositionPoseSensorConfig Config_T;
+typedef msf_updates::LasersRTKVisionSensorConfig Config_T;
 typedef dynamic_reconfigure::Server<Config_T> ReconfigureServer;
 typedef shared_ptr<ReconfigureServer> ReconfigureServerPtr;
 
-class PositionPoseSensorManager : public msf_core::MSF_SensorManagerROS<
+class LasersRTKVisionManager : public msf_core::MSF_SensorManagerROS<
     msf_updates::EKFState> {
-  typedef PositionPoseSensorManager this_T;
+  typedef LasersRTKVisionManager this_T;
   typedef msf_pose_sensor::PoseSensorHandler<
       msf_updates::pose_measurement::PoseMeasurement<>, this_T> PoseSensorHandler_T;
   friend class msf_pose_sensor::PoseSensorHandler<
@@ -51,28 +53,33 @@ class PositionPoseSensorManager : public msf_core::MSF_SensorManagerROS<
   typedef EKFState_T::StateSequence_T StateSequence_T;
   typedef EKFState_T::StateDefinition_T StateDefinition_T;
 
-  PositionPoseSensorManager(
-      ros::NodeHandle pnh = ros::NodeHandle("~/position_pose_sensor")) {
+  LasersRTKVisionManager(
+      ros::NodeHandle pnh = ros::NodeHandle("~/lasers_rtk_vision_sensor")) {
     imu_handler_.reset(
         new msf_core::IMUHandler_ROS<msf_updates::EKFState>(*this, "msf_core",
                                                             "imu_handler"));
 
     bool distortmeas = false;  ///< Distort the pose measurements
-
+    // vision
     pose_handler_.reset(
         new PoseSensorHandler_T(*this, "", "pose_sensor", distortmeas));
     AddHandler(pose_handler_);
 
+    // rtk
     position_handler_.reset(
         new PositionSensorHandler_T(*this, "", "position_sensor"));
     AddHandler(position_handler_);
 
+    // pressure
+    pressure_handler_.reset(
+        new msf_pressure_sensor::PressureSensorHandler(*this, "", "pressure_sensor"));
+    AddHandler(pressure_handler_);
+
     reconf_server_.reset(new ReconfigureServer(pnh));
-    ReconfigureServer::CallbackType f = boost::bind(&this_T::Config, this, _1,
-                                                    _2);
+    ReconfigureServer::CallbackType f = boost::bind(&this_T::Config, this, _1, 2);
     reconf_server_->setCallback(f);
   }
-  virtual ~PositionPoseSensorManager() {
+  virtual ~LasersRTKVisionManager() {
   }
 
   virtual const Config_T& Getcfg() {
@@ -99,6 +106,8 @@ class PositionPoseSensorManager : public msf_core::MSF_SensorManagerROS<
     position_handler_->SetNoises(config.position_noise_meas);
     position_handler_->SetDelay(config.position_delay);
 
+    pressure_handler_->SetNoises(config.press_noise_meas_p);
+
     if ((level & msf_updates::PositionPoseSensor_INIT_FILTER)
         && config.core_init_filter == true) {
       Init(config.pose_initial_scale);
@@ -124,6 +133,7 @@ class PositionPoseSensorManager : public msf_core::MSF_SensorManagerROS<
   void Init(double scale) const {
     Eigen::Matrix<double, 3, 1> p, v, b_w, b_a, g, w_m, a_m, p_ic, p_vc, p_wv,
         p_ip, p_pos;
+    Eigen::Matrix<double, 1, 1> b_p; //pressure bias
     Eigen::Quaternion<double> q, q_wv, q_ic, q_vc;
     msf_core::MSF_Core<EKFState_T>::ErrorStateCov P;
 
@@ -144,6 +154,9 @@ class PositionPoseSensorManager : public msf_core::MSF_SensorManagerROS<
 
     p_vc = pose_handler_->GetPositionMeasurement();
     q_vc = pose_handler_->GetAttitudeMeasurement();
+
+    b_p << pose_handler_->GetPositionMeasurement()(2) / scale
+            - pressure_handler_->GetPressureMeasurement()(0);  /// Pressure drift state
 
     MSF_INFO_STREAM(
         "initial measurement vision: pos:["<<p_vc.transpose()<<"] orientation: " <<STREAMQUAT(q_vc));
@@ -232,7 +245,8 @@ class PositionPoseSensorManager : public msf_core::MSF_SensorManagerROS<
     meas->time = ros::Time::now().toSec();
 
     // Call initialization in core.
-    msf_core_->Init(meas);
+    // msf_core_->Init(meas);
+    this->msf_core_->Init(meas);
   }
 
   // Prior to this call, all states are initialized to zero/identity.
@@ -257,6 +271,8 @@ class PositionPoseSensorManager : public msf_core::MSF_SensorManagerROS<
         config_.pose_noise_p_ic);
     const msf_core::Vector1 n_L = msf_core::Vector1::Constant(
         config_.pose_noise_scale);
+    const msf_core::Vector1 nb_p = msf_core::Vector1::Constant(
+        config_.press_noise_bias_p);
 
     // Compute the blockwise Q values and store them with the states,
     // these then get copied by the core to the correct places in Qd.
@@ -270,6 +286,8 @@ class PositionPoseSensorManager : public msf_core::MSF_SensorManagerROS<
         (dt * nqicv.cwiseProduct(nqicv)).asDiagonal();
     state.GetQBlock<StateDefinition_T::p_ic>() =
         (dt * npicv.cwiseProduct(npicv)).asDiagonal();
+    state.GetQBlock<StateDefinition_T::b_p>() = 
+        (dt * nb_p.cwiseProduct(nb_p)).asDiagonal();
   }
 
   virtual void SetStateCovariance(
@@ -286,9 +304,9 @@ class PositionPoseSensorManager : public msf_core::MSF_SensorManagerROS<
   }
 
   virtual void SanityCheckCorrection(
-      EKFState_T& delaystate,
-      const EKFState_T& buffstate,
-      Eigen::Matrix<double, EKFState_T::nErrorStatesAtCompileTime, 1>& correction) const {
+    EKFState_T& delaystate,
+    const EKFState_T& buffstate,
+    Eigen::Matrix<double, EKFState_T::nErrorStatesAtCompileTime, 1>& correction) const {
 
     UNUSED(buffstate);
     UNUSED(correction);
@@ -305,4 +323,4 @@ class PositionPoseSensorManager : public msf_core::MSF_SensorManagerROS<
   }
 };
 }
-#endif  // POSITION_POSE_SENSOR_MANAGER_H
+#endif  // LASERS_RTK_VISION_SENSOR_MANAGER_H

@@ -14,12 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "position_pose_sensormanager.h"
+#include "lasers_rtk_sensormanager.h"
 
 int main(int argc, char** argv) {
-  ros::init(argc, argv, "msf_position_pose_sensor");
+  ros::init(argc, argv, "msf_lasers_rtk_vision_sensor");
 
-  msf_updates::PositionPoseSensorManager manager;
+  msf_updates::LasersRTKVisionManager manager;
 
   ros::spin();
 
