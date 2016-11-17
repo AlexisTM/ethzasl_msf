@@ -21,7 +21,8 @@
 int main(int argc, char** argv) {
   ros::init(argc, argv, "msf_dual_position_sensor");
 
-  msf_updates::DualPositionSensorManager manager;
+  // Missimplemented sensor it should be msf_updates
+  msf_position_sensor::DualPositionSensorManager manager;
 
   ros::spin();
 

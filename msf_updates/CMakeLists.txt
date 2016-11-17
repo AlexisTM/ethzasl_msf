@@ -20,6 +20,7 @@ generate_dynamic_reconfigure_options(
     cfg/PosePressureSensor.cfg
     cfg/PositionPoseSensor.cfg
     cfg/SinglePoseSensor.cfg
+    cfg/DualPositionSensor.cfg
     cfg/SinglePositionSensor.cfg
     cfg/SphericalPositionSensor.cfg
     cfg/LasersRTKVisionSensor.cfg
@@ -39,12 +40,13 @@ target_link_libraries(pose_distorter ${catkin_LIBRARIES})
 if(EXISTS "${PROJECT_SOURCE_DIR}/COMPILE_ONLY_POSEFILTER")
 add_subdirectory(src/pose_msf)
 else()
-add_subdirectory(src/pose_msf)
+#add_subdirectory(src/pose_msf)
 #add_subdirectory(src/pose_pressure_msf)
-add_subdirectory(src/position_msf)
-add_subdirectory(src/position_pose_msf)
+#add_subdirectory(src/position_msf)
+add_subdirectory(src/dual_position_msf)
+#add_subdirectory(src/position_pose_msf)
 #add_subdirectory(src/spherical_msf)
-add_subdirectory(src/lasers_rtk_vision_msf)
+#add_subdirectory(src/lasers_rtk_vision_msf)
 endif()
 
 add_executable(test_distort src/test/test_distort.cc)

@@ -90,8 +90,8 @@ class DualPositionSensorManager : public msf_core::MSF_SensorManagerROS<
     config_ = config;
     position_handler_->SetNoises(config.position_noise_meas);
     position_handler_->SetDelay(config.position_delay);
-    position_handler2_->SetNoises(config.position_noise_meas2);
-    position_handler2_->SetDelay(config.position_delay2);
+    position_handler2_->SetNoises(config.position2_noise_meas);
+    position_handler2_->SetDelay(config.position2_delay);
     if ((level & msf_updates::DualPositionSensor_INIT_FILTER)
         && config.core_init_filter == true) {
       Init(1.0);
@@ -193,11 +193,15 @@ class DualPositionSensorManager : public msf_core::MSF_SensorManagerROS<
   virtual void CalculateQAuxiliaryStates(EKFState_T& state, double dt) const {
     const msf_core::Vector3 npipv = msf_core::Vector3::Constant(
         config_.position_noise_p_ip);
+    const msf_core::Vector3 npipv2 = msf_core::Vector3::Constant(
+        config_.position2_noise_p_ip);
 
     // Compute the blockwise Q values and store them with the states,
     //these then get copied by the core to the correct places in Qd.
     state.GetQBlock<StateDefinition_T::p_ip>() =
         (dt * npipv.cwiseProduct(npipv)).asDiagonal();
+    state.GetQBlock<StateDefinition_T::p_ip2>() =
+        (dt * npipv2.cwiseProduct(npipv2)).asDiagonal();
   }
 
   virtual void SetStateCovariance(
