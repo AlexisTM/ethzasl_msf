@@ -117,7 +117,7 @@ class PosePositionPressureManager : public msf_core::MSF_SensorManagerROS<
 
     // Init call with "set height" checkbox.
     if ((level & msf_updates::PosePositionPressureSensor_SET_HEIGHT)
-        && config.core_set_height == true) {
+        && config.press_reset == true) {
       Eigen::Matrix<double, 3, 1> p = pose_handler_->GetPositionMeasurement();
       if (p.norm() == 0) {
         MSF_WARN_STREAM(

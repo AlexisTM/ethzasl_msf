@@ -18,6 +18,7 @@ include_directories(include ${catkin_INCLUDE_DIRS})
 
 generate_dynamic_reconfigure_options(
     cfg/PosePressureSensor.cfg
+    cfg/PositionPressureSensor.cfg
     cfg/PositionPoseSensor.cfg
     cfg/SinglePoseSensor.cfg
     cfg/DualPositionSensor.cfg
@@ -46,7 +47,8 @@ else()
 #add_subdirectory(src/dual_position_msf)
 #add_subdirectory(src/position_pose_msf)
 #add_subdirectory(src/spherical_msf)
-add_subdirectory(src/pose_position_pressure_msf)
+#add_subdirectory(src/pose_position_pressure_msf)
+add_subdirectory(src/position_pressure_msf)
 endif()
 
 add_executable(test_distort src/test/test_distort.cc)
