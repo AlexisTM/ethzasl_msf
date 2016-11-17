@@ -14,8 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef LASERS_RTK_VISION_SENSOR_MANAGER_H
-#define LASERS_RTK_VISION_SENSOR_MANAGER_H
+#ifndef POSITION_POSE_SENSOR_MANAGER_H
+#define POSITION_POSE_SENSOR_MANAGER_H
 
 #include <ros/ros.h>
 
@@ -23,10 +23,9 @@
 #include <msf_core/msf_sensormanagerROS.h>
 #include <msf_core/msf_IMUHandler_ROS.h>
 #include "msf_statedef.hpp"
-#include <msf_updates/pressure_sensor_handler/presure_sensorhandler.h>
-#include <msf_updates/pressure_sensor_handler/presure_measurement.h>
 #include <msf_updates/pose_sensor_handler/pose_sensorhandler.h>
 #include <msf_updates/pose_sensor_handler/pose_measurement.h>
+#include <msf_updates/pressure_sensor_handler/pressure_sensorhandler.h>
 #include <msf_updates/position_sensor_handler/position_sensorhandler.h>
 #include <msf_updates/position_sensor_handler/position_measurement.h>
 #include <msf_updates/LasersRTKVisionSensorConfig.h>
@@ -46,8 +45,8 @@ class LasersRTKVisionManager : public msf_core::MSF_SensorManagerROS<
       msf_updates::pose_measurement::PoseMeasurement<>, this_T>;
   typedef msf_position_sensor::PositionSensorHandler<
       msf_updates::position_measurement::PositionMeasurement, this_T> PositionSensorHandler_T;
-  friend class msf_position_sensor::PositionSensorHandler<
-      msf_updates::position_measurement::PositionMeasurement, this_T>;
+  friend class msf_position_sensor::PositionSensorHandler<msf_updates::position_measurement::PositionMeasurement, this_T>;
+
  public:
   typedef msf_updates::EKFState EKFState_T;
   typedef EKFState_T::StateSequence_T StateSequence_T;
@@ -60,25 +59,26 @@ class LasersRTKVisionManager : public msf_core::MSF_SensorManagerROS<
                                                             "imu_handler"));
 
     bool distortmeas = false;  ///< Distort the pose measurements
-    // vision
+
     pose_handler_.reset(
         new PoseSensorHandler_T(*this, "", "pose_sensor", distortmeas));
     AddHandler(pose_handler_);
 
-    // rtk
     position_handler_.reset(
         new PositionSensorHandler_T(*this, "", "position_sensor"));
     AddHandler(position_handler_);
 
-    // pressure
     pressure_handler_.reset(
-        new msf_pressure_sensor::PressureSensorHandler(*this, "", "pressure_sensor"));
+        new msf_pressure_sensor::PressureSensorHandler(*this, "",
+                                                       "pressure_sensor"));
     AddHandler(pressure_handler_);
 
     reconf_server_.reset(new ReconfigureServer(pnh));
-    ReconfigureServer::CallbackType f = boost::bind(&this_T::Config, this, _1, 2);
+    ReconfigureServer::CallbackType f = boost::bind(&this_T::Config, this, _1,
+                                                    _2);
     reconf_server_->setCallback(f);
   }
+
   virtual ~LasersRTKVisionManager() {
   }
 
@@ -90,6 +90,7 @@ class LasersRTKVisionManager : public msf_core::MSF_SensorManagerROS<
   shared_ptr<msf_core::IMUHandler_ROS<msf_updates::EKFState> > imu_handler_;
   shared_ptr<PoseSensorHandler_T> pose_handler_;
   shared_ptr<PositionSensorHandler_T> position_handler_;
+  shared_ptr<msf_pressure_sensor::PressureSensorHandler> pressure_handler_;
 
   Config_T config_;
   ReconfigureServerPtr reconf_server_;  ///< Dynamic reconfigure server.
@@ -102,20 +103,20 @@ class LasersRTKVisionManager : public msf_core::MSF_SensorManagerROS<
     pose_handler_->SetNoises(config.pose_noise_meas_p,
                              config.pose_noise_meas_q);
     pose_handler_->SetDelay(config.pose_delay);
+    
+    pressure_handler_->SetNoises(config.press_noise_meas_p);
 
     position_handler_->SetNoises(config.position_noise_meas);
     position_handler_->SetDelay(config.position_delay);
 
-    pressure_handler_->SetNoises(config.press_noise_meas_p);
-
-    if ((level & msf_updates::PositionPoseSensor_INIT_FILTER)
+    if ((level & msf_updates::LasersRTKVisionSensor_INIT_FILTER)
         && config.core_init_filter == true) {
       Init(config.pose_initial_scale);
       config.core_init_filter = false;
     }
 
     // Init call with "set height" checkbox.
-    if ((level & msf_updates::PositionPoseSensor_SET_HEIGHT)
+    if ((level & msf_updates::LasersRTKVisionSensor_SET_HEIGHT)
         && config.core_set_height == true) {
       Eigen::Matrix<double, 3, 1> p = pose_handler_->GetPositionMeasurement();
       if (p.norm() == 0) {
@@ -133,30 +134,31 @@ class LasersRTKVisionManager : public msf_core::MSF_SensorManagerROS<
   void Init(double scale) const {
     Eigen::Matrix<double, 3, 1> p, v, b_w, b_a, g, w_m, a_m, p_ic, p_vc, p_wv,
         p_ip, p_pos;
-    Eigen::Matrix<double, 1, 1> b_p; //pressure bias
+    Eigen::Matrix<double, 1, 1> b_p;
     Eigen::Quaternion<double> q, q_wv, q_ic, q_vc;
     msf_core::MSF_Core<EKFState_T>::ErrorStateCov P;
 
     // init values
-    g << 0, 0, 9.81;	/// Gravity.
-    b_w << 0, 0, 0;		/// Bias gyroscopes.
-    b_a << 0, 0, 0;		/// Bias accelerometer.
+    g << 0, 0, 9.81;  /// Gravity.
+    b_w << 0, 0, 0;   /// Bias gyroscopes.
+    b_a << 0, 0, 0;   /// Bias accelerometer.
 
-    v << 0, 0, 0;			/// Robot velocity (IMU centered).
-    w_m << 0, 0, 0;		/// Initial angular velocity.
+    v << 0, 0, 0;     /// Robot velocity (IMU centered).
+    w_m << 0, 0, 0;   /// Initial angular velocity.
 
     q_wv.setIdentity();  // World-vision rotation drift.
     p_wv.setZero();      // World-vision position drift.
 
     P.setZero();  // Error state covariance; if zero, a default initialization in msf_core is used.
+    
+    b_p
+        << pose_handler_->GetPositionMeasurement()(2) / scale
+            - pressure_handler_->GetPressureMeasurement()(0);  /// Pressure drift state
 
     p_pos = position_handler_->GetPositionMeasurement();
 
     p_vc = pose_handler_->GetPositionMeasurement();
     q_vc = pose_handler_->GetAttitudeMeasurement();
-
-    b_p << pose_handler_->GetPositionMeasurement()(2) / scale
-            - pressure_handler_->GetPressureMeasurement()(0);  /// Pressure drift state
 
     MSF_INFO_STREAM(
         "initial measurement vision: pos:["<<p_vc.transpose()<<"] orientation: " <<STREAMQUAT(q_vc));
@@ -213,13 +215,7 @@ class LasersRTKVisionManager : public msf_core::MSF_SensorManagerROS<
     p_wv = p - p_vision;  // Shift the vision frame so that it fits the position
     // measurement
 
-    a_m = q.inverse() * g;			    /// Initial acceleration.
-
-    //TODO (slynen) Fix this.
-    //we want z from vision (we did scale init), so:
-//    p(2) = p_vision(2);
-//    p_wv(2) = 0;
-//    position_handler_->adjustGPSZReference(p(2));
+    a_m = q.inverse() * g;          /// Initial acceleration.
 
     // Prepare init "measurement"
     // True means that we will also set the initial sensor readings.
@@ -238,6 +234,7 @@ class LasersRTKVisionManager : public msf_core::MSF_SensorManagerROS<
     meas->SetStateInitValue < StateDefinition_T::q_ic > (q_ic);
     meas->SetStateInitValue < StateDefinition_T::p_ic > (p_ic);
     meas->SetStateInitValue < StateDefinition_T::p_ip > (p_ip);
+    meas->SetStateInitValue < StateDefinition_T::b_p > (b_p);
 
     SetStateCovariance(meas->GetStateCovariance());  // Call my set P function.
     meas->Getw_m() = w_m;
@@ -245,8 +242,7 @@ class LasersRTKVisionManager : public msf_core::MSF_SensorManagerROS<
     meas->time = ros::Time::now().toSec();
 
     // Call initialization in core.
-    // msf_core_->Init(meas);
-    this->msf_core_->Init(meas);
+    msf_core_->Init(meas);
   }
 
   // Prior to this call, all states are initialized to zero/identity.
@@ -286,7 +282,7 @@ class LasersRTKVisionManager : public msf_core::MSF_SensorManagerROS<
         (dt * nqicv.cwiseProduct(nqicv)).asDiagonal();
     state.GetQBlock<StateDefinition_T::p_ic>() =
         (dt * npicv.cwiseProduct(npicv)).asDiagonal();
-    state.GetQBlock<StateDefinition_T::b_p>() = 
+        state.GetQBlock<StateDefinition_T::b_p>() = 
         (dt * nb_p.cwiseProduct(nb_p)).asDiagonal();
   }
 
@@ -304,9 +300,9 @@ class LasersRTKVisionManager : public msf_core::MSF_SensorManagerROS<
   }
 
   virtual void SanityCheckCorrection(
-    EKFState_T& delaystate,
-    const EKFState_T& buffstate,
-    Eigen::Matrix<double, EKFState_T::nErrorStatesAtCompileTime, 1>& correction) const {
+      EKFState_T& delaystate,
+      const EKFState_T& buffstate,
+      Eigen::Matrix<double, EKFState_T::nErrorStatesAtCompileTime, 1>& correction) const {
 
     UNUSED(buffstate);
     UNUSED(correction);
@@ -323,4 +319,4 @@ class LasersRTKVisionManager : public msf_core::MSF_SensorManagerROS<
   }
 };
 }
-#endif  // LASERS_RTK_VISION_SENSOR_MANAGER_H
+#endif  // POSITION_POSE_SENSOR_MANAGER_H
