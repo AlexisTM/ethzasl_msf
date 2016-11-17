@@ -23,7 +23,7 @@ generate_dynamic_reconfigure_options(
     cfg/DualPositionSensor.cfg
     cfg/SinglePositionSensor.cfg
     cfg/SphericalPositionSensor.cfg
-    cfg/LasersRTKVisionSensor.cfg
+    cfg/PosePositionPressureSensor.cfg
 )
 
 catkin_package(
@@ -46,7 +46,7 @@ else()
 add_subdirectory(src/dual_position_msf)
 #add_subdirectory(src/position_pose_msf)
 #add_subdirectory(src/spherical_msf)
-#add_subdirectory(src/lasers_rtk_vision_msf)
+#add_subdirectory(src/pose_position_pressure_msf)
 endif()
 
 add_executable(test_distort src/test/test_distort.cc)

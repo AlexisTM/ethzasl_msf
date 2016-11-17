@@ -28,7 +28,7 @@
 #include <msf_updates/pressure_sensor_handler/pressure_sensorhandler.h>
 #include <msf_updates/position_sensor_handler/position_sensorhandler.h>
 #include <msf_updates/position_sensor_handler/position_measurement.h>
-#include <msf_updates/LasersRTKVisionSensorConfig.h>
+#include <msf_updates/PosePositionPressureSensorConfig.h>
 
 namespace msf_updates {
 
@@ -36,9 +36,9 @@ typedef msf_updates::LasersRTKVisionSensorConfig Config_T;
 typedef dynamic_reconfigure::Server<Config_T> ReconfigureServer;
 typedef shared_ptr<ReconfigureServer> ReconfigureServerPtr;
 
-class LasersRTKVisionManager : public msf_core::MSF_SensorManagerROS<
+class PosePositionPressureManager : public msf_core::MSF_SensorManagerROS<
     msf_updates::EKFState> {
-  typedef LasersRTKVisionManager this_T;
+  typedef PosePositionPressureManager this_T;
   typedef msf_pose_sensor::PoseSensorHandler<
       msf_updates::pose_measurement::PoseMeasurement<>, this_T> PoseSensorHandler_T;
   friend class msf_pose_sensor::PoseSensorHandler<
@@ -52,8 +52,8 @@ class LasersRTKVisionManager : public msf_core::MSF_SensorManagerROS<
   typedef EKFState_T::StateSequence_T StateSequence_T;
   typedef EKFState_T::StateDefinition_T StateDefinition_T;
 
-  LasersRTKVisionManager(
-      ros::NodeHandle pnh = ros::NodeHandle("~/lasers_rtk_vision_sensor")) {
+  PosePositionPressureManager(
+      ros::NodeHandle pnh = ros::NodeHandle("~/pose_position_pressure_sensor")) {
     imu_handler_.reset(
         new msf_core::IMUHandler_ROS<msf_updates::EKFState>(*this, "msf_core",
                                                             "imu_handler"));
@@ -79,7 +79,7 @@ class LasersRTKVisionManager : public msf_core::MSF_SensorManagerROS<
     reconf_server_->setCallback(f);
   }
 
-  virtual ~LasersRTKVisionManager() {
+  virtual ~PosePositionPressureManager() {
   }
 
   virtual const Config_T& Getcfg() {
