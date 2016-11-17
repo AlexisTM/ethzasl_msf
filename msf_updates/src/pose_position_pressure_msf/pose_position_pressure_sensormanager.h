@@ -32,7 +32,7 @@
 
 namespace msf_updates {
 
-typedef msf_updates::LasersRTKVisionSensorConfig Config_T;
+typedef msf_updates::PosePositionPressureSensorConfig Config_T;
 typedef dynamic_reconfigure::Server<Config_T> ReconfigureServer;
 typedef shared_ptr<ReconfigureServer> ReconfigureServerPtr;
 
@@ -109,14 +109,14 @@ class PosePositionPressureManager : public msf_core::MSF_SensorManagerROS<
     position_handler_->SetNoises(config.position_noise_meas);
     position_handler_->SetDelay(config.position_delay);
 
-    if ((level & msf_updates::LasersRTKVisionSensor_INIT_FILTER)
+    if ((level & msf_updates::PosePositionPressureSensor_INIT_FILTER)
         && config.core_init_filter == true) {
       Init(config.pose_initial_scale);
       config.core_init_filter = false;
     }
 
     // Init call with "set height" checkbox.
-    if ((level & msf_updates::LasersRTKVisionSensor_SET_HEIGHT)
+    if ((level & msf_updates::PosePositionPressureSensor_SET_HEIGHT)
         && config.core_set_height == true) {
       Eigen::Matrix<double, 3, 1> p = pose_handler_->GetPositionMeasurement();
       if (p.norm() == 0) {
